@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Guitar Tool</title>
+  <meta name="description" content="Tuner, chord library, tab editor and metronome for guitar.">
+  <meta name="theme-color" content="#16181d" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Guitar Tool">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="view-title">Tuner</h1>
+  </header>
+
+  <main>
+    <!-- Tuner -->
+    <section id="view-tuner" class="view" data-title="Tuner">
+      <div class="tuner">
+        <div class="tuner-display" id="tuner-display">
+          <div class="tuner-note"><span id="tuner-note">–</span><sub id="tuner-octave"></sub></div>
+          <div class="tuner-freq"><span id="tuner-freq">0.0</span> Hz · <span id="tuner-cents">0</span>¢</div>
+          <div class="meter" aria-hidden="true">
+            <div class="meter-scale">
+              <span>-50</span><span>-25</span><span>0</span><span>+25</span><span>+50</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-zone"></div>
+              <div class="meter-needle" id="tuner-needle"></div>
+            </div>
+          </div>
+          <div class="tuner-hint" id="tuner-hint">Tap Start and play a string</div>
+        </div>
+
+        <div class="string-chips" id="tuner-strings" aria-label="Reference tones"></div>
+        <p class="small muted center">Tap a string to hear its reference tone.</p>
+
+        <div class="row center gap">
+          <button class="btn primary big" id="tuner-toggle">Start</button>
+        </div>
+        <div class="row center gap small">
+          <label for="tuner-a4">A4 =</label>
+          <input id="tuner-a4" type="number" min="420" max="460" step="1" value="440" class="num">
+          <span>Hz</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chords -->
+    <section id="view-chords" class="view" data-title="Chords" hidden>
+      <div class="chords">
+        <input id="chord-search" class="search" type="search" placeholder="Search e.g. Am7, F#m, Bbmaj7" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <div class="pill-row" id="chord-roots" role="group" aria-label="Root"></div>
+        <div class="pill-row" id="chord-qualities" role="group" aria-label="Quality"></div>
+
+        <div class="chord-card">
+          <div class="chord-name" id="chord-name">C</div>
+          <div class="chord-notes muted small" id="chord-notes"></div>
+          <button class="chord-diagram" id="chord-diagram" aria-label="Strum chord"></button>
+          <div class="row center gap">
+            <button class="btn" id="chord-prev" aria-label="Previous voicing">‹</button>
+            <span class="small muted" id="chord-voicing">1 / 1</span>
+            <button class="btn" id="chord-next" aria-label="Next voicing">›</button>
+          </div>
+          <p class="small muted center">Tap the diagram to strum.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <section id="view-tabs" class="view" data-title="Tabs" hidden>
+      <div class="tabs">
+        <div class="row gap wrap">
+          <select id="tab-select" class="grow" aria-label="Choose tab"></select>
+          <button class="btn" id="tab-new">New</button>
+          <button class="btn" id="tab-dup">Copy</button>
+          <button class="btn danger" id="tab-del">Delete</button>
+        </div>
+        <div class="row gap wrap">
+          <input id="tab-title" class="grow" type="text" placeholder="Title" aria-label="Title">
+          <label class="small">BPM <input id="tab-bpm" type="number" min="30" max="300" value="90" class="num"></label>
+          <label class="small">Steps/beat
+            <select id="tab-spb">
+              <option value="1">1</option><option value="2">2</option>
+              <option value="3">3</option><option value="4">4</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="tab-grid-wrap" id="tab-grid-wrap">
+          <div class="tab-grid" id="tab-grid"></div>
+        </div>
+
+        <div class="transport row gap wrap">
+          <button class="btn primary" id="tab-play">▶ Play</button>
+          <button class="btn" id="tab-stop">■ Stop</button>
+          <label class="toggle small"><input type="checkbox" id="tab-loop"> Loop</label>
+          <label class="toggle small"><input type="checkbox" id="tab-from-sel"> From selection</label>
+          <span class="grow"></span>
+          <button class="btn" id="tab-export">Export</button>
+          <button class="btn" id="tab-import">Import</button>
+        </div>
+
+        <div class="keypad" id="tab-keypad">
+          <div class="keypad-frets" id="tab-frets"></div>
+          <div class="keypad-tools">
+            <button class="btn" data-act="left" aria-label="Previous column">←</button>
+            <button class="btn" data-act="up" aria-label="Higher string">↑</button>
+            <button class="btn" data-act="down" aria-label="Lower string">↓</button>
+            <button class="btn" data-act="right" aria-label="Next column">→</button>
+            <button class="btn" data-act="clear" aria-label="Clear note">✕</button>
+            <button class="btn" data-act="clearcol">Clear col</button>
+            <button class="btn" data-act="insert">+ Col</button>
+            <button class="btn" data-act="delete">− Col</button>
+            <button class="btn" data-act="bar">+ Bar</button>
+            <button class="btn" data-act="chord">Chord →</button>
+          </div>
+        </div>
+        <p class="small muted">Tap a cell, then a fret. Keyboard: type fret digits, arrows to move, Backspace to clear, Space to play.</p>
+      </div>
+    </section>
+
+    <!-- Metronome -->
+    <section id="view-metronome" class="view" data-title="Metronome" hidden>
+      <div class="metro">
+        <div class="beat-dots" id="metro-dots"></div>
+        <div class="metro-bpm">
+          <button class="btn round" id="metro-minus" aria-label="Slower">−</button>
+          <div class="metro-bpm-value"><span id="metro-bpm">100</span><small>BPM</small></div>
+          <button class="btn round" id="metro-plus" aria-label="Faster">+</button>
+        </div>
+        <input type="range" id="metro-slider" min="30" max="300" value="100" aria-label="Tempo">
+        <div class="row center gap">
+          <button class="btn primary big" id="metro-toggle">Start</button>
+          <button class="btn big" id="metro-tap">Tap</button>
+        </div>
+        <div class="row center gap wrap">
+          <label class="small">Beats
+            <select id="metro-beats"></select>
+          </label>
+          <label class="small">Subdivision
+            <select id="metro-sub">
+              <option value="1">♩ Quarter</option>
+              <option value="2">♪ Eighth</option>
+              <option value="3">Triplet</option>
+              <option value="4">Sixteenth</option>
+            </select>
+          </label>
+          <label class="toggle small"><input type="checkbox" id="metro-accent" checked> Accent beat 1</label>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Sections">
+    <a href="#tuner" data-view="tuner"><span class="ico">◎</span>Tuner</a>
+    <a href="#chords" data-view="chords"><span class="ico">▦</span>Chords</a>
+    <a href="#tabs" data-view="tabs"><span class="ico">≡</span>Tabs</a>
+    <a href="#metronome" data-view="metronome"><span class="ico">◭</span>Metronome</a>
+  </nav>
+
+  <dialog id="dialog" class="dialog">
+    <form method="dialog">
+      <h2 id="dialog-title"></h2>
+      <textarea id="dialog-text" rows="10" spellcheck="false"></textarea>
+      <div class="row gap end">
+        <button class="btn" value="cancel">Close</button>
+        <button class="btn" id="dialog-copy" type="button">Copy</button>
+        <button class="btn primary" id="dialog-ok" value="ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
