@@ -181,6 +181,10 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 44px; }
 .chords { display: flex; flex-direction: column; gap: 12px; }
 .pill-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
 .pill-row::-webkit-scrollbar { display: none; }
+/* With a mouse (no swipe) or a wide screen, wrap the pills instead of scrolling them sideways. */
+@media (hover: hover) and (pointer: fine), (min-width: 700px) {
+  .pill-row { flex-wrap: wrap; overflow-x: visible; }
+}
 .pill-row button {
   flex: 0 0 auto;
   min-height: 40px; min-width: 44px;

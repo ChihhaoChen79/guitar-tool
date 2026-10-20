@@ -1,6 +1,6 @@
 // Offline support: precache the app shell, then serve from cache while refreshing in the background.
 // Bump VERSION when shipping changes so old caches are dropped.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `guitar-tool-${VERSION}`;
 const ASSETS = [
   './',
