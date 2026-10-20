@@ -67,7 +67,7 @@ export function chordAt(tab, colIndex) {
 export function chordFrets(chord) {
   const p = chord && parseChordName(chord.name);
   if (!p) return null;
-  const vs = getVoicings(p.root, p.quality);
+  const vs = getVoicings(p.root, p.quality, p.bass);
   return vs[Math.min(chord.voicing || 0, vs.length - 1)].frets.slice();
 }
 

@@ -76,15 +76,20 @@ test('every chord voicing contains only chord tones and the root', () => {
 });
 
 test('parseChordName', () => {
-  assert.deepEqual(parseChordName('Am7'), { root: 9, quality: 'm7' });
-  assert.deepEqual(parseChordName('F#m'), { root: 6, quality: 'm' });
-  assert.deepEqual(parseChordName('Bbmaj7'), { root: 10, quality: 'maj7' });
-  assert.deepEqual(parseChordName('c'), { root: 0, quality: 'maj' });
-  assert.deepEqual(parseChordName('Db'), { root: 1, quality: 'maj' });
-  assert.deepEqual(parseChordName('Gsus'), { root: 7, quality: 'sus4' });
-  assert.deepEqual(parseChordName('Bm7b5'), { root: 11, quality: 'm7b5' });
-  assert.deepEqual(parseChordName('F#m7-5'), { root: 6, quality: 'm7b5' });
-  assert.deepEqual(parseChordName('Cø'), { root: 0, quality: 'm7b5' });
+  assert.deepEqual(parseChordName('Am7'), { root: 9, quality: 'm7', bass: null });
+  assert.deepEqual(parseChordName('F#m'), { root: 6, quality: 'm', bass: null });
+  assert.deepEqual(parseChordName('Bbmaj7'), { root: 10, quality: 'maj7', bass: null });
+  assert.deepEqual(parseChordName('c'), { root: 0, quality: 'maj', bass: null });
+  assert.deepEqual(parseChordName('Db'), { root: 1, quality: 'maj', bass: null });
+  assert.deepEqual(parseChordName('Gsus'), { root: 7, quality: 'sus4', bass: null });
+  assert.deepEqual(parseChordName('Bm7b5'), { root: 11, quality: 'm7b5', bass: null });
+  assert.deepEqual(parseChordName('F#m7-5'), { root: 6, quality: 'm7b5', bass: null });
+  assert.deepEqual(parseChordName('Cø'), { root: 0, quality: 'm7b5', bass: null });
+  assert.deepEqual(parseChordName('D/F#'), { root: 2, quality: 'maj', bass: 6 });
+  assert.deepEqual(parseChordName('Am/G'), { root: 9, quality: 'm', bass: 7 });
+  assert.deepEqual(parseChordName('Cmaj7/B'), { root: 0, quality: 'maj7', bass: 11 });
+  assert.deepEqual(parseChordName('G/G'), { root: 7, quality: 'maj', bass: null });
+  assert.equal(parseChordName('G/H'), null);
   assert.equal(parseChordName('H7'), null);
   assert.equal(parseChordName('Cxyz'), null);
 });
@@ -159,4 +164,42 @@ E|-x---x--1---1--|
   assert.deepEqual(notes.map((c) => c.chord && c.chord.name), ['Am', null, 'F', null]);
   assert.deepEqual(notes.map((c) => c.strum), ['down', 'up', 'down', 'up']);
   assert.deepEqual(notes[0].frets, [MUTE, 0, 2, 2, 1, 0]);
+});
+
+test('slash chords: every chord over every bass has voicings with that bass lowest', () => {
+  const TPC = TUNING.map((m) => m % 12);
+  let count = 0;
+  for (let r = 0; r < 12; r++) {
+    for (const q of QUALITIES) {
+      const allowed = new Set(q.intervals.map((i) => (r + i) % 12));
+      for (let bass = 0; bass < 12; bass++) {
+        if (bass === r) continue;
+        const vs = getVoicings(r, q.id, bass);
+        const label = `${ROOTS[r]}${q.suffix}/${ROOTS[bass]}`;
+        assert.ok(vs.length >= 1, `${label} has no voicing`);
+        for (const v of vs) {
+          const sounding = v.frets.map((f, s) => (f == null ? null : (TPC[s] + f) % 12));
+          const lowest = sounding.findIndex((x) => x != null);
+          assert.equal(sounding[lowest], bass, `${label} ${v.frets} bass`);
+          for (const pc of sounding.slice(lowest + 1)) {
+            if (pc != null) assert.ok(allowed.has(pc) || pc === bass, `${label} ${v.frets} has ${pc}`);
+          }
+          assert.ok(sounding.includes(r), `${label} ${v.frets} missing root`);
+          const fretted = v.frets.filter((f) => f > 0);
+          if (fretted.length) assert.ok(Math.max(...fretted) - Math.min(...fretted) <= 4, `${label} stretch ${v.frets}`);
+          count++;
+        }
+      }
+    }
+  }
+  assert.ok(count > 1000);
+});
+
+test('common slash chords come first with their chart shapes', () => {
+  const first = (name) => { const p = parseChordName(name); return getVoicings(p.root, p.quality, p.bass)[0].frets.map((f) => (f == null ? 'x' : f)).join(''); };
+  assert.equal(first('G/B'), 'x20003');
+  assert.equal(first('D/F#'), '2x0232');
+  assert.equal(first('C/G'), '332010');
+  assert.equal(first('Am/G'), '3x2210');
+  assert.equal(first('F/C'), 'x33211');
 });

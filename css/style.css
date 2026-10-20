@@ -188,6 +188,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 44px; }
   border: 1px solid var(--line); border-radius: 20px;
   background: var(--surface);
 }
+.pill-row button.common { border-color: var(--accent); }
 .pill-row button.active { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 .chord-card {
   background: var(--surface);

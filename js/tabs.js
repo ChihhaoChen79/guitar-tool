@@ -264,7 +264,7 @@ export function initTabs() {
 
   const draftVoicings = () => {
     const p = parseChordName(draft.name);
-    return p ? getVoicings(p.root, p.quality) : [];
+    return p ? getVoicings(p.root, p.quality, p.bass) : [];
   };
 
   const renderPanel = () => {

@@ -70,8 +70,49 @@ const A_SHAPES = {
   aug: [[X, 0, 3, 2, 2, 1], [0, 1, 4, 3, 3, 2]],
 };
 
+// Common slash chords (chord over a different bass note), as found in standard chord charts.
+// [name, frets, fingers]; 'T' = thumb wrapped over the neck.
+const SLASH = [
+  ['C/E', '032010', '032010'], ['C/G', '332010', '342010'], ['C/B', 'x22010', '023010'], ['C/D', 'xx0010', '000010'],
+  ['Cadd9/G', '332033', '231034'],
+  ['D/F#', '2x0232', 'T00132'], ['D/A', 'x00232', '000132'], ['D/C', 'x30232', '030132'],
+  ['Dm/F', '1x0231', 'T00231'], ['Dm/A', 'x00231', '000231'], ['Dm/C', 'x30231', '040231'],
+  ['E/G#', '4x2100', '402100'], ['E/B', 'x22100', '023100'],
+  ['Em/G', '322000', '312000'], ['Em/B', 'x22000', '012000'], ['Em/D', 'xx0000', '000000'],
+  ['F/A', 'x03211', '003211'], ['F/C', 'x33211', '034211'], ['F/G', '3x3211', '304211'],
+  ['G/B', 'x20003', '010003'], ['G/D', 'xx0003', '000003'], ['G/F#', '2x0003', '100003'],
+  ['G7/B', 'x20001', '010002'],
+  ['A/C#', 'x42220', '041110'], ['A/E', '002220', '001230'], ['A/G', '3x2220', '301110'],
+  ['Am/C', 'x32210', '042310'], ['Am/E', '002210', '002310'], ['Am/G', '3x2210', '402310'], ['Am/F#', '2x2210', '203410'],
+  ['Bm/A', 'x04432', '003421'],
+];
+let slashMap = null;
+function slashVoicings(root, quality, bass) {
+  if (!slashMap) {
+    slashMap = new Map();
+    for (const [name, frets, fingers] of SLASH) {
+      const p = parseChordName(name);
+      const key = `${p.root}:${p.quality}/${p.bass}`;
+      if (!slashMap.has(key)) slashMap.set(key, []);
+      slashMap.get(key).push({ frets: parseFrets(frets), fingers: parseFrets(fingers) });
+    }
+  }
+  return slashMap.get(`${root}:${quality}/${bass}`) || [];
+}
+
+// Bass notes that have a hand-picked slash shape for this chord.
+export function commonBasses(root, quality) {
+  slashVoicings(0, 'maj', 0);
+  const out = [];
+  for (const key of slashMap.keys()) {
+    const [rq, b] = key.split('/');
+    if (rq === `${root}:${quality}`) out.push(+b);
+  }
+  return out;
+}
+
 function parseFrets(s) {
-  return [...s].map((c) => (c === 'x' ? null : parseInt(c, 10)));
+  return [...s].map((c) => (c === 'x' ? null : c === 'T' ? 'T' : parseInt(c, 10)));
 }
 
 function fromShape([rel, fingers], rootFret) {
@@ -86,7 +127,89 @@ function fromShape([rel, fingers], rootFret) {
   return { frets, fingers: fing };
 }
 
-export function getVoicings(rootIndex, qualityId) {
+// Voicings for a chord, optionally over a bass note (pitch class 0-11): hand-picked slash shapes
+// first, then regular shapes with the bass placed on the low E or A string.
+export function getVoicings(rootIndex, qualityId, bass = null) {
+  if (bass == null || bass === rootIndex) return baseVoicings(rootIndex, qualityId);
+  const list = slashVoicings(rootIndex, qualityId, bass).map((v) => ({ frets: v.frets.slice(), fingers: v.fingers.slice() }));
+  for (const v of baseVoicings(rootIndex, qualityId)) {
+    for (const bs of [0, 1]) {
+      for (let b = 0; b <= 15; b++) {
+        if ((TUNING_PC[bs] + b) % 12 !== bass) continue;
+        const frets = v.frets.map((f, s) => (s < bs ? null : s === bs ? b : f));
+        const fingers = v.fingers.map((f, s) => (s <= bs ? 0 : f));
+        const fretted = frets.filter((f) => f > 0);
+        const sounding = frets.filter((f) => f != null).length;
+        if (sounding < 4 || (fretted.length && Math.max(...fretted) - Math.min(...fretted) > 3)) continue;
+        // Replacing a string with the bass must not remove the chord's root.
+        if (!frets.some((f, s) => f != null && (TUNING_PC[s] + f) % 12 === rootIndex)) continue;
+        // Reach: the bass can't sit below the shape's lowest fret, except one fret lower on the
+        // low E string, where the thumb wrapped over the neck plays it.
+        const others = frets.filter((f, s) => s > bs && f > 0);
+        const minOther = others.length ? Math.min(...others) : Infinity;
+        if (b > 0 && others.length && b < minOther) {
+          if (bs !== 0 || b < minOther - 1) continue;
+          fingers[bs] = 'T';
+        }
+        list.push({ frets, fingers });
+      }
+    }
+  }
+  if (!list.length) list.push(...searchSlash(rootIndex, qualityId, bass));
+  return dedupe(list).slice(0, 6);
+}
+
+// Fallback for unusual chord/bass pairs: try every four-fret window and keep the shapes that
+// sound all chord tones over the bass, preferring more strings, no gaps, and lower positions.
+function searchSlash(root, qualityId, bass) {
+  const tones = QUALITIES.find((q) => q.id === qualityId).intervals.map((i) => (root + i) % 12);
+  const found = [];
+  for (const bs of [0, 1]) {
+    for (let b = 0; b <= 12; b++) {
+      if ((TUNING_PC[bs] + b) % 12 !== bass) continue;
+      for (let w = Math.max(1, b - 3); w <= Math.max(1, b); w++) {
+        const options = [];
+        for (let s = bs + 1; s < 6; s++) {
+          const opts = [null];
+          for (const f of [0, w, w + 1, w + 2, w + 3]) if (tones.includes((TUNING_PC[s] + f) % 12)) opts.push(f);
+          options.push(opts);
+        }
+        const walk = (s, acc) => {
+          if (s === options.length) {
+            const frets = [...Array(bs).fill(null), b, ...acc];
+            const pcs = new Set(frets.map((f, i) => (f == null ? null : (TUNING_PC[i] + f) % 12)));
+            // Root required; a four-note chord may drop one other tone, as players often do.
+            const missing = tones.filter((t) => !pcs.has(t) && t !== bass).length;
+            if (!pcs.has(root) || missing > (tones.length >= 4 ? 1 : 0)) return;
+            const sounding = frets.filter((f) => f != null).length;
+            const first = frets.findIndex((f) => f != null);
+            const last = 5 - [...frets].reverse().findIndex((f) => f != null);
+            const gaps = frets.slice(first, last + 1).filter((f) => f == null).length;
+            const fretted = frets.filter((f) => f > 0);
+            if (fretted.length > 4 || (fretted.length && Math.max(...fretted) - Math.min(...fretted) > 3)) return;
+            found.push({ frets, fingers: frets.map(() => 0), score: sounding * 10 - gaps * 15 - missing * 30 - w });
+            return;
+          }
+          for (const f of options[s]) walk(s + 1, [...acc, f]);
+        };
+        walk(0, []);
+      }
+    }
+  }
+  return found.sort((x, y) => y.score - x.score).slice(0, 3).map(({ frets, fingers }) => ({ frets, fingers }));
+}
+
+function dedupe(list) {
+  const seen = new Set();
+  return list.filter((v) => {
+    const k = v.frets.join(',');
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+function baseVoicings(rootIndex, qualityId) {
   const list = [];
   const open = OPEN[`${ROOTS[rootIndex]}:${qualityId}`];
   if (open) list.push({ frets: parseFrets(open[0]), fingers: parseFrets(open[1]) });
@@ -109,13 +232,16 @@ export function getVoicings(rootIndex, qualityId) {
   return unique.sort((a, b) => lowest(a) - lowest(b));
 }
 
-export function chordName(rootIndex, qualityId) {
-  return ROOTS[rootIndex] + QUALITIES.find((q) => q.id === qualityId).suffix;
+export function chordName(rootIndex, qualityId, bass = null) {
+  const name = ROOTS[rootIndex] + QUALITIES.find((q) => q.id === qualityId).suffix;
+  return bass == null || bass === rootIndex ? name : `${name}/${ROOTS[bass]}`;
 }
 
-export function chordNoteNames(rootIndex, qualityId) {
+export function chordNoteNames(rootIndex, qualityId, bass = null) {
   const q = QUALITIES.find((x) => x.id === qualityId);
-  return q.intervals.map((i) => ROOTS[(rootIndex + i) % 12]);
+  const notes = q.intervals.map((i) => ROOTS[(rootIndex + i) % 12]);
+  if (bass != null && bass !== rootIndex && !notes.includes(ROOTS[bass])) notes.unshift(ROOTS[bass]);
+  return notes;
 }
 
 const LETTER_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -133,15 +259,22 @@ const SUFFIX_ALIASES = {
   aug: 'aug', '+': 'aug',
 };
 
-// "F#m7" -> { root: 6, quality: 'm7' }; null if not understood.
+function notePc(letter, acc) {
+  let pc = LETTER_PC[letter.toUpperCase()];
+  if (acc === '#' || acc === '♯') pc += 1;
+  if (acc === 'b' || acc === '♭') pc -= 1;
+  return (pc + 12) % 12;
+}
+
+// "F#m7" -> { root: 6, quality: 'm7', bass: null }; "D/F#" -> { root: 2, quality: 'maj', bass: 6 }.
+// Returns null if not understood.
 export function parseChordName(text) {
-  const m = /^\s*([A-Ga-g])([#♯b♭]?)(.*?)\s*$/.exec(text || '');
+  const m = /^\s*([A-Ga-g])([#♯b♭]?)(.*?)(?:\/([A-Ga-g])([#♯b♭]?))?\s*$/.exec(text || '');
   if (!m) return null;
-  let pc = LETTER_PC[m[1].toUpperCase()];
-  if (m[2] === '#' || m[2] === '♯') pc += 1;
-  if (m[2] === 'b' || m[2] === '♭') pc -= 1;
   const rest = m[3];
   const quality = SUFFIX_ALIASES[rest] ?? SUFFIX_ALIASES[rest.toLowerCase()];
   if (!quality) return null;
-  return { root: (pc + 12) % 12, quality };
+  const root = notePc(m[1], m[2]);
+  const bass = m[4] ? notePc(m[4], m[5]) : null;
+  return { root, quality, bass: bass === root ? null : bass };
 }
