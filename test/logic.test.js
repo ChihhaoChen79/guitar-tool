@@ -203,3 +203,20 @@ test('common slash chords come first with their chart shapes', () => {
   assert.equal(first('Am/G'), '3x2210');
   assert.equal(first('F/C'), 'x33211');
 });
+
+test('detectPitch works on a quiet, noisy signal like a raw iPhone mic', () => {
+  let seed = 1;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647) * 2 - 1;
+  for (const midi of TUNING) {
+    const f = 440 * 2 ** ((midi - 69) / 12);
+    const b = wave(f, 4096, 'saw');
+    // About -50 dBFS of guitar with noise 15 dB below it.
+    for (let i = 0; i < b.length; i++) b[i] = b[i] * 0.006 + rand() * 0.0005;
+    assert.equal(detectPitch(b, SR), null, 'the old fixed gate rejects it');
+    const r = detectPitch(b, SR, { minRms: 0.0006 });
+    assert.ok(r && r.clarity >= 0.75 && Math.abs(cents(r.freq, f)) < 3, `${f}: ${r && r.freq} ${r && r.clarity}`);
+  }
+  const noise = new Float32Array(4096).map(() => rand() * 0.002);
+  const n = detectPitch(noise, SR, { minRms: 0.0006 });
+  assert.ok(!n || n.clarity < 0.75, 'pure noise is not a confident pitch');
+});

@@ -155,6 +155,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 44px; }
 .tuner-display.close .tuner-note { color: var(--warn); }
 .tuner-display.off .tuner-note { color: var(--bad); }
 .meter { margin-top: 16px; }
+.level { height: 4px; margin: 10px auto 0; max-width: 200px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.level-bar { height: 100%; width: 0; background: var(--muted); transition: width .06s linear; }
+.level-bar.active { background: var(--good); }
 .meter-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
 .meter-track {
   position: relative; height: 28px; margin-top: 4px;
