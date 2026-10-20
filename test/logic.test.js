@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { detectPitch, freqToNote } from '../js/pitch.js';
 import { ROOTS, QUALITIES, getVoicings, parseChordName } from '../js/chord-data.js';
-import { newTab, toAscii, fromAscii, emptyColumn, normalizeTab } from '../js/tab-format.js';
+import { newTab, toAscii, fromAscii, emptyColumn, normalizeTab, chordAt, chordFrets, MUTE } from '../js/tab-format.js';
 import { TUNING, noteToFreq, renderPluck } from '../js/audio.js';
 
 const SR = 48000;
@@ -82,23 +82,45 @@ test('parseChordName', () => {
   assert.deepEqual(parseChordName('c'), { root: 0, quality: 'maj' });
   assert.deepEqual(parseChordName('Db'), { root: 1, quality: 'maj' });
   assert.deepEqual(parseChordName('Gsus'), { root: 7, quality: 'sus4' });
+  assert.deepEqual(parseChordName('Bm7b5'), { root: 11, quality: 'm7b5' });
+  assert.deepEqual(parseChordName('F#m7-5'), { root: 6, quality: 'm7b5' });
+  assert.deepEqual(parseChordName('Cø'), { root: 0, quality: 'm7b5' });
   assert.equal(parseChordName('H7'), null);
   assert.equal(parseChordName('Cxyz'), null);
 });
 
-test('ASCII tab export/import round-trips, including rests and 2-digit frets', () => {
+const col = (pairs, extra = {}) => {
+  const c = emptyColumn();
+  pairs.forEach(([s, f]) => { c.frets[s] = f; });
+  return Object.assign(c, extra);
+};
+
+test('ASCII tab export/import round-trips rests, 2-digit frets, mutes, strums and chords', () => {
   const t = newTab('Riff', 0);
-  const col = (pairs) => { const c = emptyColumn(); pairs.forEach(([s, f]) => { c[s] = f; }); return c; };
   t.columns = [
-    emptyColumn(), col([[0, 3]]), col([[1, 12], [2, 2]]), emptyColumn(), emptyColumn(),
-    col([[5, 0], [4, 1], [3, 0]]), emptyColumn(), col([[0, 24]]),
-    col([[2, 5]]), emptyColumn(), emptyColumn(), col([[3, 7]]),
+    emptyColumn(), col([[0, 3]], { chord: { name: 'G', voicing: 0 } }), col([[1, 12], [2, 2]]), emptyColumn(), emptyColumn(),
+    col([[5, 0], [4, 1], [3, 0]], { strum: 'down' }), emptyColumn(), col([[0, 24]]),
+    col([[0, MUTE], [1, MUTE], [2, MUTE], [3, MUTE]], { strum: 'up', chord: { name: 'Bm7b5', voicing: 0 } }),
+    emptyColumn(), col([], { chord: { name: 'Am', voicing: 0 } }), col([[3, 7]]),
   ];
   const text = toAscii(t);
-  assert.match(text, /^Riff\ne\|/);
+  assert.match(text, /^Riff\n {4}G +Bm7b5/);
+  assert.match(text, /\nE\|/);
+  assert.match(text, /x/);
+  assert.match(text, /↓.*↑\n$/);
   const back = fromAscii(text);
   assert.equal(back.title, 'Riff');
   assert.deepEqual(back.columns, t.columns);
+});
+
+test('chordAt / chordFrets follow the latest chord marker', () => {
+  const t = newTab('x', 6);
+  t.columns[1].chord = { name: 'C', voicing: 0 };
+  t.columns[4].chord = { name: 'G', voicing: 0 };
+  assert.equal(chordAt(t, 0), null);
+  assert.equal(chordAt(t, 3).name, 'C');
+  assert.equal(chordAt(t, 5).name, 'G');
+  assert.deepEqual(chordFrets(chordAt(t, 2)), [null, 3, 2, 0, 1, 0]);
 });
 
 test('fromAscii reads a hand-written tab', () => {
@@ -109,14 +131,32 @@ G|---0-------|
 D|-2---------|
 A|-----------|
 E|-----------|`);
-  const notes = back.columns.filter((c) => c.some((f) => f != null)).map((c) => c.findIndex((f) => f != null));
+  const notes = back.columns.filter((c) => c.frets.some((f) => f != null)).map((c) => c.frets.findIndex((f) => f != null));
   assert.deepEqual(notes, [2, 3, 4, 5]);
   assert.throws(() => fromAscii('nothing here'));
 });
 
-test('normalizeTab cleans bad data', () => {
-  const t = normalizeTab({ bpm: 'abc', stepsPerBeat: 9, columns: [[1, 'x', 30, -1, null, 5]] });
+test('normalizeTab cleans bad data and upgrades old array columns', () => {
+  const t = normalizeTab({ bpm: 'abc', stepsPerBeat: 9, columns: [[1, 'x', 30, -1, null, 5], { frets: [0], strum: 'sideways', chord: { name: 'Zz' } }] });
   assert.equal(t.bpm, 90);
   assert.equal(t.stepsPerBeat, 4);
-  assert.deepEqual(t.columns[0], [1, null, null, null, null, 5]);
+  assert.deepEqual(t.columns[0], { frets: [1, MUTE, null, null, null, 5], strum: null, chord: null });
+  assert.deepEqual(t.columns[1], { frets: [0, null, null, null, null, null], strum: null, chord: null });
+});
+
+test('fromAscii snaps hand-written chord names and strum marks to nearby notes', () => {
+  const t = fromAscii(`My song
+  Am      F
+e|-0---0--1---1--|
+B|-1---1--1---1--|
+G|-2---2--2---2--|
+D|-2---2--3---3--|
+A|-0---0--3---3--|
+E|-x---x--1---1--|
+   ↓   ↑  d   u`);
+  assert.equal(t.title, 'My song');
+  const notes = t.columns.filter((c) => c.frets.some((f) => f != null));
+  assert.deepEqual(notes.map((c) => c.chord && c.chord.name), ['Am', null, 'F', null]);
+  assert.deepEqual(notes.map((c) => c.strum), ['down', 'up', 'down', 'up']);
+  assert.deepEqual(notes[0].frets, [MUTE, 0, 2, 2, 1, 0]);
 });

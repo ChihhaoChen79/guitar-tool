@@ -9,7 +9,9 @@
   <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Solid status bar: under "black-translucent" iOS lays a home-screen app out one
+       status-bar height short, leaving an empty strip at the bottom. -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Guitar Tool">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
@@ -99,11 +101,33 @@
           <div class="tab-grid" id="tab-grid"></div>
         </div>
 
+        <div class="chord-panel" id="tab-chord-panel" hidden>
+          <div class="row gap">
+            <input id="tab-chord-name" class="grow" type="text" placeholder="Chord, e.g. G, Am7, Bm7b5" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Chord name">
+            <button class="btn" id="tab-chord-close" aria-label="Close chord panel">✕</button>
+          </div>
+          <div class="chord-panel-body">
+            <div class="mini-diagram" id="tab-chord-diagram"></div>
+            <div class="chord-panel-side">
+              <div class="row gap">
+                <button class="btn" id="tab-chord-prev" aria-label="Previous voicing">‹</button>
+                <span class="small muted" id="tab-chord-voicing">–</span>
+                <button class="btn" id="tab-chord-next" aria-label="Next voicing">›</button>
+              </div>
+              <button class="btn primary" id="tab-chord-set">Set chord here</button>
+              <button class="btn" id="tab-chord-fill">Fill column</button>
+              <button class="btn danger" id="tab-chord-remove">Remove chord</button>
+            </div>
+          </div>
+          <p class="small muted" id="tab-chord-help">A chord applies from its column until the next chord. With “Tap fills chord” on, tapping an empty string cell under it enters that string’s fret.</p>
+        </div>
+
         <div class="transport row gap wrap">
           <button class="btn primary" id="tab-play">▶ Play</button>
           <button class="btn" id="tab-stop">■ Stop</button>
           <label class="toggle small"><input type="checkbox" id="tab-loop"> Loop</label>
           <label class="toggle small"><input type="checkbox" id="tab-from-sel"> From selection</label>
+          <label class="toggle small"><input type="checkbox" id="tab-autofill" checked> Tap fills chord</label>
           <span class="grow"></span>
           <button class="btn" id="tab-export">Export</button>
           <button class="btn" id="tab-import">Import</button>
@@ -112,19 +136,21 @@
         <div class="keypad" id="tab-keypad">
           <div class="keypad-frets" id="tab-frets"></div>
           <div class="keypad-tools">
-            <button class="btn" data-act="left" aria-label="Previous column">←</button>
-            <button class="btn" data-act="up" aria-label="Higher string">↑</button>
-            <button class="btn" data-act="down" aria-label="Lower string">↓</button>
-            <button class="btn" data-act="right" aria-label="Next column">→</button>
-            <button class="btn" data-act="clear" aria-label="Clear note">✕</button>
+            <button class="btn" data-act="left" aria-label="Previous column">◀</button>
+            <button class="btn" data-act="up" aria-label="Higher string">▲</button>
+            <button class="btn" data-act="down" aria-label="Lower string">▼</button>
+            <button class="btn" data-act="right" aria-label="Next column">▶</button>
+            <button class="btn" data-act="clear" aria-label="Clear note">Clear</button>
             <button class="btn" data-act="clearcol">Clear col</button>
+            <button class="btn" data-act="strum-down">Strum ↓</button>
+            <button class="btn" data-act="strum-up">Strum ↑</button>
+            <button class="btn" data-act="chord">Chord…</button>
             <button class="btn" data-act="insert">+ Col</button>
             <button class="btn" data-act="delete">− Col</button>
             <button class="btn" data-act="bar">+ Bar</button>
-            <button class="btn" data-act="chord">Chord →</button>
           </div>
         </div>
-        <p class="small muted">Tap a cell, then a fret. Keyboard: type fret digits, arrows to move, Backspace to clear, Space to play.</p>
+        <p class="small muted">Tap a cell, then a fret; <b>X</b> is a muted note. <b>Strum ↓/↑</b> sweeps the column (and fills it with the current chord if it’s empty). Tap the chord row above the strings to set a chord. Keyboard: digits, x, arrows, Backspace, d/u to strum, Space to play.</p>
       </div>
     </section>
 

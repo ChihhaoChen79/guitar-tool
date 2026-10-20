@@ -1,5 +1,5 @@
 import { detectPitch, freqToNote } from './pitch.js';
-import { TUNING, STRING_NAMES, midiToFreq, pluck, ensureRunning, getContext } from './audio.js';
+import { TUNING, STRING_NAMES, midiToFreq, pluck, ensureRunning, getContext, setAudioSession } from './audio.js';
 import { load, save } from './store.js';
 
 export function initTuner() {
@@ -99,10 +99,18 @@ export function initTuner() {
       return;
     }
     try {
+      // Ask for the microphone first (still inside the tap), with an audio session that allows recording.
+      const constraints = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } };
+      setAudioSession('play-and-record');
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        if (err.name !== 'InvalidStateError') throw err;
+        // Let Safari pick the session itself and try once more.
+        setAudioSession('auto');
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      }
       const c = await ensureRunning();
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
       source = c.createMediaStreamSource(stream);
       analyser = c.createAnalyser();
       analyser.fftSize = 4096;
@@ -125,6 +133,7 @@ export function initTuner() {
     if (source) source.disconnect();
     if (stream) stream.getTracks().forEach((t) => t.stop());
     stream = source = analyser = null;
+    setAudioSession('playback');
     history = [];
     els.toggle.textContent = 'Start';
     reset();

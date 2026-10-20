@@ -1,6 +1,6 @@
 // Offline support: precache the app shell, then serve from cache while refreshing in the background.
 // Bump VERSION when shipping changes so old caches are dropped.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `guitar-tool-${VERSION}`;
 const ASSETS = [
   './',
@@ -23,7 +23,8 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE)
+    .then((c) => c.addAll(ASSETS.map((a) => new Request(a, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {

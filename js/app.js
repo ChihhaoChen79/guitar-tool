@@ -37,6 +37,12 @@ window.addEventListener('hashchange', () => show(location.hash.slice(1)));
 show(location.hash.slice(1));
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  // When a new version takes over an already-controlled page, reload once so its files are used.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+  });
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => { /* offline support is optional */ });
   });

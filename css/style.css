@@ -223,6 +223,14 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 44px; }
   border-right: 1px solid var(--line);
 }
 .tab-labels span, .tab-col .cell { height: 34px; display: flex; align-items: center; justify-content: center; }
+.tab-labels span.ann, .tab-col .ann { height: 28px; }
+.tab-col .ann {
+  width: 34px; border: 0; padding: 0; background: none; cursor: pointer;
+  font-size: 13px; font-weight: 700; color: var(--accent);
+}
+.tab-col .chord-cell { justify-content: flex-start; white-space: nowrap; overflow: visible; position: relative; z-index: 1; padding-left: 4px; }
+.tab-col .chord-cell.in-chord { box-shadow: inset 0 -2px 0 var(--sel); }
+.tab-col .strum-cell { font-size: 18px; }
 .tab-labels span { font-family: ui-monospace, Menlo, monospace; color: var(--muted); font-size: 14px; }
 .tab-col { position: relative; }
 .tab-col.bar-start { border-left: 2px solid var(--muted); }
@@ -246,7 +254,27 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 44px; }
 .keypad-frets { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
 .keypad-frets .btn, .keypad-tools .btn { min-width: 0; }
 .keypad-frets .btn { padding: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
-.keypad-tools { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.keypad-tools { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.keypad-frets .btn.mute { color: var(--bad); }
+
+/* Chord panel in the tab editor */
+.chord-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.chord-panel[hidden] { display: none; }
+.chord-panel p { margin: 0; }
+.chord-panel-body { display: flex; gap: 12px; align-items: center; }
+.chord-panel-side { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.mini-diagram { width: 130px; flex: 0 0 130px; }
+.mini-diagram svg { width: 100%; height: auto; display: block; }
+.mini-diagram svg text { fill: var(--text); font-family: inherit; }
+.mini-diagram .ln { stroke: var(--text); }
+.mini-diagram .dot { fill: var(--accent); }
+.mini-diagram .dot-txt { fill: var(--accent-text); font-weight: 700; }
 .keypad-tools .btn { padding: 0 4px; font-size: 14px; }
 
 /* Metronome */
@@ -281,5 +309,5 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 44px; }
 
 @media (min-width: 700px) {
   .keypad-frets { grid-template-columns: repeat(13, 1fr); }
-  .keypad-tools { grid-template-columns: repeat(10, 1fr); }
+  .keypad-tools { grid-template-columns: repeat(12, 1fr); }
 }

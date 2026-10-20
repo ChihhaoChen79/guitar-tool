@@ -33,12 +33,19 @@ export function getMaster() {
   return master;
 }
 
-// iOS only starts audio from a user gesture. Resume the context and play a silent
-// buffer on the first touch; ask for "playback" so the ring/silent switch doesn't mute it.
-export function installUnlock() {
+// Safari's Audio Session API (iOS 17+). "playback" keeps sound on with the ring/silent switch,
+// but a playback-only session cannot record: getUserMedia then fails with InvalidStateError.
+// The tuner switches to "play-and-record" while the microphone is on.
+export function setAudioSession(type) {
   try {
-    if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    if (navigator.audioSession && navigator.audioSession.type !== type) navigator.audioSession.type = type;
   } catch { /* not supported */ }
+}
+
+// iOS only starts audio from a user gesture. Resume the context and play a silent
+// buffer on the first touch.
+export function installUnlock() {
+  setAudioSession('playback');
   const unlock = () => {
     const c = getContext();
     if (c.state !== 'running') c.resume();
@@ -129,7 +136,7 @@ export function pluck(freq, time, { gain = 0.5, duration = 2.4 } = {}) {
   src.buffer = pluckBuffer(freq);
   const g = c.createGain();
   g.gain.setValueAtTime(gain, t);
-  g.gain.setTargetAtTime(0, t + duration - 0.2, 0.05);
+  g.gain.setTargetAtTime(0, Math.max(t, t + duration - 0.2), duration < 0.4 ? duration / 4 : 0.05);
   src.connect(g).connect(getMaster());
   src.start(t);
   src.stop(t + duration);
@@ -141,6 +148,11 @@ export function pluck(freq, time, { gain = 0.5, duration = 2.4 } = {}) {
       try { src.stop(s + 0.1); } catch { /* already stopped */ }
     },
   };
+}
+
+// A fretting-hand-muted ("x") note: a short, dull thud at the string's pitch.
+export function deadNote(freq, time) {
+  return pluck(freq, time, { gain: 0.35, duration: 0.09 });
 }
 
 // level: 2 = accented downbeat, 1 = beat, 0 = subdivision.

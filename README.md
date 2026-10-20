@@ -3,8 +3,8 @@
 A guitar toolkit in plain HTML, CSS and JavaScript. It runs in a laptop browser and in iPhone Safari, and you can install it on your home screen as an app. It works offline after the first visit.
 
 - **Tuner**: microphone pitch detection (YIN algorithm), a cents meter, reference tones for each string, and adjustable A4.
-- **Chords**: 12 roots × 12 chord types (major, minor, 7, maj7, m7, sus2, sus4, add9, 6, m6, dim, aug). It shows open and barre voicings as diagrams, has a search box ("F#m7"), and you can tap a diagram to strum it.
-- **Tabs**: a grid editor where you tap a cell and pick a fret. You can add, insert and delete columns, add bars, and drop in a whole chord. Playback uses a synthesized plucked string, with loop and start-from-selection. Tabs save in the browser and can be exported and imported as text tabs (`e|--3--|`).
+- **Chords**: 12 roots × 13 chord types (major, minor, 7, maj7, m7, m7♭5, sus2, sus4, add9, 6, m6, dim, aug). It shows open and barre voicings as diagrams, has a search box ("F#m7"), and you can tap a diagram to strum it.
+- **Tabs**: a grid editor where you tap a cell and pick a fret, or **X** for a muted note. A chord row above the strings sets a chord that applies until the next one; with "Tap fills chord" on, tapping an empty string under a chord enters that string's fret. **Strum ↓/↑** sweeps a column (filling it with the current chord if it's empty). Playback uses a synthesized plucked string, with loop and start-from-selection. Tabs save in the browser and can be exported and imported as text tabs (`e|--3--|`), including a chord line above and a strum line (↓ ↑) below.
 - **Metronome**: 30–300 BPM, tap tempo, 1–12 beats per bar, subdivisions, and an accent on beat 1. It keeps the screen awake while running, where the browser supports it.
 
 There are no dependencies and no build step.

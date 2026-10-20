@@ -13,6 +13,7 @@ export const QUALITIES = [
   { id: 'add9', label: 'add9', suffix: 'add9', intervals: [0, 2, 4, 7] },
   { id: '6', label: '6', suffix: '6', intervals: [0, 4, 7, 9] },
   { id: 'm6', label: 'm6', suffix: 'm6', intervals: [0, 3, 7, 9] },
+  { id: 'm7b5', label: 'm7♭5', suffix: 'm7b5', intervals: [0, 3, 6, 10] },
   { id: 'dim', label: 'dim', suffix: 'dim', intervals: [0, 3, 6] },
   { id: 'aug', label: 'aug', suffix: 'aug', intervals: [0, 4, 8] },
 ];
@@ -26,6 +27,7 @@ const OPEN = {
   'D:maj': ['xx0232', '000132'], 'D:m': ['xx0231', '000231'], 'D:7': ['xx0212', '000213'],
   'D:maj7': ['xx0222', '000111'], 'D:m7': ['xx0211', '000211'], 'D:sus2': ['xx0230', '000130'],
   'D:sus4': ['xx0233', '000134'], 'D:6': ['xx0202', '000102'],
+  'E:m7b5': ['012030', '012040'],
   'E:maj': ['022100', '023100'], 'E:m': ['022000', '023000'], 'E:7': ['020100', '020100'],
   'E:m7': ['022030', '012030'], 'E:sus4': ['022200', '023400'], 'E:maj7': ['021100', '031200'],
   'F:maj7': ['xx3210', '003210'],
@@ -49,6 +51,7 @@ const E_SHAPES = {
   6: [[0, 2, 2, 1, 2, 0], [1, 3, 3, 2, 4, 1]],
   m6: [[0, 2, 2, 0, 2, 0], [1, 3, 3, 1, 4, 1]],
   dim: [[0, 1, 2, 0, X, X], [2, 3, 4, 1, 0, 0]],
+  m7b5: [[0, X, 0, 0, -1, X], [2, 0, 3, 4, 1, 0]],
   aug: [[0, 3, 2, 1, 1, 0], [1, 4, 3, 2, 2, 1]],
 };
 const A_SHAPES = {
@@ -63,6 +66,7 @@ const A_SHAPES = {
   6: [[X, 0, 2, 2, 2, 2], [0, 1, 3, 3, 3, 3]],
   m6: [[X, 0, 2, 2, 1, 2], [0, 1, 3, 3, 2, 4]],
   dim: [[X, 0, 1, 2, 1, X], [0, 1, 2, 4, 3, 0]],
+  m7b5: [[X, 0, 1, 0, 1, X], [0, 1, 3, 2, 4, 0]],
   aug: [[X, 0, 3, 2, 2, 1], [0, 1, 4, 3, 3, 2]],
 };
 
@@ -71,6 +75,7 @@ function parseFrets(s) {
 }
 
 function fromShape([rel, fingers], rootFret) {
+  if (rel.some((f) => f != null && f + rootFret < 0)) rootFret += 12;
   const frets = rel.map((f) => (f == null ? null : f + rootFret));
   // At fret 0 the barre finger becomes the open nut, so every finger moves down one.
   const fing = rel.map((f, i) => {
@@ -123,6 +128,7 @@ const SUFFIX_ALIASES = {
   sus2: 'sus2', sus4: 'sus4', sus: 'sus4',
   add9: 'add9', add2: 'add9',
   6: '6', m6: 'm6', min6: 'm6',
+  m7b5: 'm7b5', 'm7-5': 'm7b5', 'm7♭5': 'm7b5', 'ø': 'm7b5', 'ø7': 'm7b5', min7b5: 'm7b5', 'm-7b5': 'm7b5',
   dim: 'dim', '°': 'dim', o: 'dim',
   aug: 'aug', '+': 'aug',
 };
